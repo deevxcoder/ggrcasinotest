@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchGames, fetchProviders } from "@/lib/nexx";
+import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,29 @@ export async function GET(req: Request) {
 
     let brandId = brandIdParam ? parseInt(brandIdParam, 10) : null;
 
+    // Fetch site settings to check enabled providers
+    const settings = await db.siteSetting.findUnique({
+      where: { id: "default" },
+    });
+
+    let enabledProviders: number[] | null = null;
+    if (settings?.enabledProviders) {
+      try {
+        const parsed = JSON.parse(settings.enabledProviders);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          enabledProviders = parsed;
+        }
+      } catch (e) {
+        console.error("Failed to parse enabledProviders:", e);
+      }
+    }
+
     if (brandId) {
+      // If brandId is specified but not in enabled list, return empty
+      if (enabledProviders && !enabledProviders.includes(brandId)) {
+        return NextResponse.json({ games: [], total: 0, brand_id: brandId });
+      }
+
       const result = await fetchGames(brandId, query, limit, offset);
       let filtered = result.games;
       if (category && category !== "all") {
@@ -27,9 +50,15 @@ export async function GET(req: Request) {
       return NextResponse.json({ games: filtered, total: filtered.length, brand_id: brandId });
     }
 
-    // Featured active providers (Spribe: 57, PGSoft: 45, JILI: 49, Smartsoft: 107, Endorphina: 152, RubyPlay: 136, Hacksaw: 99)
-    const featuredBrands = [57, 45, 49, 107, 152, 136, 99];
-    const gamePromises = featuredBrands.map((bId) => fetchGames(bId, query, 30, 0));
+    // Default featured brands if none configured
+    const defaultBrands = [57, 45, 49, 107, 152, 136, 99];
+    const targetBrands = enabledProviders && enabledProviders.length > 0
+      ? enabledProviders
+      : defaultBrands;
+
+    // Fetch games for enabled brands (batch first 8 to keep response snappy)
+    const activeQueryBrands = targetBrands.slice(0, 10);
+    const gamePromises = activeQueryBrands.map((bId) => fetchGames(bId, query, 30, 0));
     const results = await Promise.all(gamePromises);
 
     let allGames = results.flatMap((r) => r.games);
@@ -60,3 +89,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

@@ -30,6 +30,13 @@ import {
   Save,
   Check,
   X,
+  Gamepad2,
+  Sliders,
+  CheckSquare,
+  Square,
+  Eye,
+  EyeOff,
+  Filter,
 } from "lucide-react";
 
 export default function AdminDashboardPage() {
@@ -42,7 +49,7 @@ export default function AdminDashboardPage() {
   const [loginLoading, setLoginLoading] = useState(false);
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState<"overview" | "players" | "rounds" | "settings" | "diagnostics">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "players" | "rounds" | "providers" | "settings" | "diagnostics">("overview");
 
   // Data states
   const [stats, setStats] = useState<any>(null);
@@ -53,6 +60,15 @@ export default function AdminDashboardPage() {
   const [rounds, setRounds] = useState<any[]>([]);
   const [roundSearch, setRoundSearch] = useState("");
   const [loadingRounds, setLoadingRounds] = useState(false);
+
+  // Providers Management state
+  const [providersList, setProvidersList] = useState<any[]>([]);
+  const [enabledProviders, setEnabledProviders] = useState<number[]>([]);
+  const [loadingProvidersList, setLoadingProvidersList] = useState(false);
+  const [savingProviders, setSavingProviders] = useState(false);
+  const [providersSaved, setProvidersSaved] = useState(false);
+  const [providerSearch, setProviderSearch] = useState("");
+  const [providerFilter, setProviderFilter] = useState<"all" | "enabled" | "disabled">("all");
 
   // Site Settings state
   const [siteName, setSiteName] = useState("NEXX CASINO");
@@ -230,6 +246,72 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // 7. Load Providers List
+  const loadProvidersList = useCallback(async () => {
+    if (!currentUser?.isAdmin) return;
+    setLoadingProvidersList(true);
+    try {
+      const res = await fetch("/api/admin/providers");
+      const data = await res.json();
+      if (data.providers) {
+        setProvidersList(data.providers);
+        // If enabledProviders from API has elements, use it.
+        // If empty / null, default to all provider brand_ids so admin can easily toggle off.
+        if (Array.isArray(data.enabledProviders) && data.enabledProviders.length > 0) {
+          setEnabledProviders(data.enabledProviders);
+        } else {
+          // If not configured, all are enabled by default
+          setEnabledProviders(data.providers.map((p: any) => p.brand_id));
+        }
+      }
+    } catch (e) {
+      console.error("Error loading providers:", e);
+    } finally {
+      setLoadingProvidersList(false);
+    }
+  }, [currentUser]);
+
+  // Save Providers Handler
+  const handleSaveProviders = async () => {
+    setSavingProviders(true);
+    setProvidersSaved(false);
+    try {
+      const res = await fetch("/api/admin/providers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabledProviders }),
+      });
+      if (res.ok) {
+        setProvidersSaved(true);
+        setTimeout(() => setProvidersSaved(false), 3500);
+      }
+    } catch (err) {
+      console.error("Error saving provider settings:", err);
+    } finally {
+      setSavingProviders(false);
+    }
+  };
+
+  const toggleProvider = (brandId: number) => {
+    setEnabledProviders((prev) =>
+      prev.includes(brandId) ? prev.filter((id) => id !== brandId) : [...prev, brandId]
+    );
+  };
+
+  const handleSelectAllProviders = () => {
+    setEnabledProviders(providersList.map((p) => p.brand_id));
+  };
+
+  const handleDeselectAllProviders = () => {
+    setEnabledProviders([]);
+  };
+
+  const handleSelectPopularPreset = () => {
+    // Spribe (57), PGSoft (45), JILI (49), Smartsoft (107), Endorphina (152), RubyPlay (136), Hacksaw (99)
+    const popularIds = [57, 45, 49, 107, 152, 136, 99];
+    setEnabledProviders(popularIds);
+  };
+
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -240,8 +322,9 @@ export default function AdminDashboardPage() {
       loadUsers();
       loadRounds();
       loadSettings();
+      loadProvidersList();
     }
-  }, [currentUser, loadStats, loadUsers, loadRounds, loadSettings]);
+  }, [currentUser, loadStats, loadUsers, loadRounds, loadSettings, loadProvidersList]);
 
   // Player Balance Adjustment Handler
   const handleAdjustBalance = async () => {
@@ -490,6 +573,11 @@ export default function AdminDashboardPage() {
             { id: "overview", label: "Dashboard & KPIs", icon: TrendingUp },
             { id: "players", label: `Players (${users.length})`, icon: Users },
             { id: "rounds", label: "Settlement Ledger", icon: Layers },
+            {
+              id: "providers",
+              label: `Providers (${enabledProviders.length}/${providersList.length})`,
+              icon: Gamepad2,
+            },
             { id: "settings", label: "Site & Webhook Settings", icon: Settings },
             { id: "diagnostics", label: "NexxAPI Diagnostics", icon: Activity },
           ].map((tab) => {
@@ -823,6 +911,300 @@ export default function AdminDashboardPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* ================= TAB 3.5: PROVIDERS VISIBILITY SETTINGS ================= */}
+        {activeTab === "providers" && (
+          <div className="space-y-6">
+            {/* Header & Quick Actions Bar */}
+            <div className="p-6 rounded-3xl bg-[#0f1422] border border-casino-border space-y-4 shadow-xl">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Gamepad2 className="w-5 h-5 text-amber-400" />
+                    <h2 className="text-base font-black text-white uppercase tracking-wide">
+                      Game Provider Visibility Control
+                    </h2>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Choose which game providers are visible in your lobby. Only enabled providers will appear to players on your platform.
+                  </p>
+                </div>
+
+                {/* Save Button */}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleSaveProviders}
+                    disabled={savingProviders}
+                    className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs uppercase tracking-wider shadow-gold-glow transition-all"
+                  >
+                    {providersSaved ? (
+                      <>
+                        <Check className="w-4 h-4 stroke-[3]" />
+                        <span>Changes Saved!</span>
+                      </>
+                    ) : savingProviders ? (
+                      <span>Saving to DB...</span>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        <span>Save Provider Visibility</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={loadProvidersList}
+                    className="p-3 rounded-2xl bg-casino-card hover:bg-casino-cardHover border border-casino-border text-gray-400 hover:text-white transition-colors"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loadingProvidersList ? "animate-spin" : ""}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Overview Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-casino-border/60">
+                <div className="p-3.5 rounded-2xl bg-[#080c14] border border-casino-border space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                    Total Providers
+                  </span>
+                  <div className="text-lg font-black text-white">{providersList.length}</div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-[#080c14] border border-emerald-500/30 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                      Visible (Enabled)
+                    </span>
+                    <Eye className="w-3.5 h-3.5 text-emerald-400" />
+                  </div>
+                  <div className="text-lg font-black text-emerald-400">
+                    {enabledProviders.length}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-[#080c14] border border-rose-500/30 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">
+                      Hidden (Disabled)
+                    </span>
+                    <EyeOff className="w-3.5 h-3.5 text-rose-400" />
+                  </div>
+                  <div className="text-lg font-black text-rose-400">
+                    {Math.max(0, providersList.length - enabledProviders.length)}
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-[#080c14] border border-amber-500/30 space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                    Platform Status
+                  </span>
+                  <div className="text-xs font-black text-amber-400 mt-1">
+                    {enabledProviders.length === 0
+                      ? "⚠️ All Hidden (Select Providers)"
+                      : `${enabledProviders.length} Providers Active`}
+                  </div>
+                </div>
+              </div>
+
+              {/* Filtering, Search & Quick Selection Presets */}
+              <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-2">
+                {/* Search Box */}
+                <div className="relative flex-1 w-full max-w-md">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={providerSearch}
+                    onChange={(e) => setProviderSearch(e.target.value)}
+                    placeholder="Search provider (e.g. PGSoft, Spribe, JILI)..."
+                    className="w-full pl-10 pr-4 py-2 bg-[#080c14] border border-casino-border focus:border-amber-500 rounded-xl text-xs font-semibold text-white focus:outline-none"
+                  />
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex items-center gap-1.5 w-full md:w-auto overflow-x-auto">
+                  {(["all", "enabled", "disabled"] as const).map((filter) => (
+                    <button
+                      key={filter}
+                      onClick={() => setProviderFilter(filter)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition-all ${
+                        providerFilter === filter
+                          ? "bg-white/15 text-white border border-white/30"
+                          : "bg-[#080c14] text-gray-400 hover:text-white border border-casino-border"
+                      }`}
+                    >
+                      {filter}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Preset Actions */}
+                <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                  <button
+                    onClick={handleSelectAllProviders}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-xs font-bold transition-colors"
+                  >
+                    Select All
+                  </button>
+
+                  <button
+                    onClick={handleDeselectAllProviders}
+                    className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-bold transition-colors"
+                  >
+                    Deselect All
+                  </button>
+
+                  <button
+                    onClick={handleSelectPopularPreset}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-colors flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Top 7 Preset</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Providers Grid */}
+            {loadingProvidersList ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-28 rounded-3xl bg-[#0f1422] animate-pulse border border-casino-border"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {providersList
+                  .filter((p) => {
+                    const matchesSearch = p.name
+                      .toLowerCase()
+                      .includes(providerSearch.toLowerCase());
+                    const isEnabled = enabledProviders.includes(p.brand_id);
+                    if (providerFilter === "enabled") return matchesSearch && isEnabled;
+                    if (providerFilter === "disabled") return matchesSearch && !isEnabled;
+                    return matchesSearch;
+                  })
+                  .map((provider) => {
+                    const isEnabled = enabledProviders.includes(provider.brand_id);
+
+                    return (
+                      <div
+                        key={provider.brand_id}
+                        onClick={() => toggleProvider(provider.brand_id)}
+                        className={`cursor-pointer p-4 rounded-3xl border transition-all select-none flex flex-col justify-between space-y-3 ${
+                          isEnabled
+                            ? "bg-[#0f1828] border-amber-500/50 shadow-gold-glow hover:border-amber-400"
+                            : "bg-[#0a0d16]/80 border-casino-border/60 opacity-60 hover:opacity-100 hover:border-gray-600"
+                        }`}
+                      >
+                        {/* Provider Header */}
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {provider.logo ? (
+                              <div className="w-10 h-10 rounded-2xl bg-[#080c14] border border-white/10 p-1.5 flex items-center justify-center shrink-0">
+                                <img
+                                  src={provider.logo}
+                                  alt={provider.name}
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.display = "none";
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-black text-sm shrink-0">
+                                🎰
+                              </div>
+                            )}
+
+                            <div className="min-w-0">
+                              <h4
+                                className={`text-sm font-black truncate ${
+                                  isEnabled ? "text-white" : "text-gray-400"
+                                }`}
+                              >
+                                {provider.name}
+                              </h4>
+                              <span className="text-[10px] text-gray-500 font-mono">
+                                Brand ID: {provider.brand_id}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Toggle Switch */}
+                          <div
+                            className={`w-12 h-6 rounded-full transition-colors relative shrink-0 ${
+                              isEnabled ? "bg-amber-500 shadow-gold-glow" : "bg-gray-800"
+                            }`}
+                          >
+                            <span
+                              className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all shadow-md ${
+                                isEnabled ? "right-1" : "left-1"
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Provider Footer Stats & Status */}
+                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[11px]">
+                          <span
+                            className={`px-2 py-0.5 rounded-md font-bold uppercase text-[10px] ${
+                              isEnabled
+                                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                : "bg-gray-800 text-gray-500"
+                            }`}
+                          >
+                            {isEnabled ? "Visible on Platform" : "Hidden"}
+                          </span>
+
+                          {provider.game_count ? (
+                            <span className="text-gray-400 font-bold">
+                              {provider.game_count} games
+                            </span>
+                          ) : (
+                            <span className="text-gray-500">Live</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+
+            {/* Bottom Save Bar */}
+            <div className="sticky bottom-4 z-20 p-4 rounded-2xl bg-[#0f1422]/95 backdrop-blur border border-casino-border shadow-2xl flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-xs text-gray-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                <span>
+                  <strong>{enabledProviders.length}</strong> of{" "}
+                  <strong>{providersList.length}</strong> providers selected for public platform
+                </span>
+              </div>
+
+              <button
+                onClick={handleSaveProviders}
+                disabled={savingProviders}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs uppercase tracking-wider shadow-gold-glow transition-all"
+              >
+                {providersSaved ? (
+                  <>
+                    <Check className="w-4 h-4 stroke-[3]" />
+                    <span>Saved!</span>
+                  </>
+                ) : savingProviders ? (
+                  <span>Saving...</span>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save Changes</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}
