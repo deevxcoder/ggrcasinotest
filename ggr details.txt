@@ -1,0 +1,8 @@
+Api url - https://api.nexxapi.tech/api/v1
+token 79b49f0e7f96cb36a53abeba98126bc7
+secrete-  67d048e3b071c6e06177054ea7062647
+Default callback -
+
+
+
+API documentation https://api.nexxapi.tech/docs#overview
