@@ -8,21 +8,9 @@ function hashPassword(password: string): string {
 }
 
 async function main() {
-  console.log("Seeding initial casino users...");
+  console.log("Seeding Supabase PostgreSQL database...");
 
-  const demoUser = await prisma.user.upsert({
-    where: { username: "demo_player" },
-    update: {},
-    create: {
-      username: "demo_player",
-      email: "player@nexxcasino.com",
-      passwordHash: hashPassword("password123"),
-      balance: 1000.0,
-      currency: "INR",
-      isAdmin: false,
-    },
-  });
-
+  // Seed Admin
   const adminUser = await prisma.user.upsert({
     where: { username: "admin" },
     update: {},
@@ -36,8 +24,39 @@ async function main() {
     },
   });
 
-  console.log("Seeded demo player:", demoUser.username, "Balance:", demoUser.balance);
-  console.log("Seeded admin:", adminUser.username);
+  // Seed VIP Player
+  const vipPlayer = await prisma.user.upsert({
+    where: { username: "player_vip1" },
+    update: {},
+    create: {
+      username: "player_vip1",
+      email: "vip1@nexxcasino.com",
+      passwordHash: hashPassword("vip123"),
+      balance: 1500.0,
+      currency: "INR",
+      isAdmin: false,
+    },
+  });
+
+  // Seed Default Site Settings
+  const settings = await prisma.siteSetting.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      siteName: "ROYAL GGR CASINO",
+      siteSubtitle: "Casino Royale",
+      logoUrl: null,
+      themeColor: "gold",
+      callbackUrl: "https://your-domain.com/api/callback",
+      returnUrl: "https://your-domain.com/lobby",
+      currency: "INR",
+    },
+  });
+
+  console.log("✅ Seeded Admin User:", adminUser.username);
+  console.log("✅ Seeded VIP Player:", vipPlayer.username, "Balance: ₹" + vipPlayer.balance);
+  console.log("✅ Seeded Site Settings:", settings.siteName);
 }
 
 main()
