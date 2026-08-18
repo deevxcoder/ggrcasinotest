@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fetchProviders } from "@/lib/nexx";
+import { ROYAL_GAMES_PROVIDER } from "@/lib/royalGames";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +19,9 @@ export async function GET() {
     const admin = await db.user.findUnique({ where: { id: auth.userId } });
     if (!admin?.isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    // Fetch ALL providers from NexxAPI (unfiltered)
-    const allProviders = await fetchProviders();
+    // Fetch ALL providers from NexxAPI (unfiltered) and prepend in-house Royal Games
+    const rawProviders = await fetchProviders();
+    const allProviders = [ROYAL_GAMES_PROVIDER, ...rawProviders.filter(p => p.brand_id !== ROYAL_GAMES_PROVIDER.brand_id)];
 
     // Get current enabled list from settings
     const settings = await db.siteSetting.findUnique({ where: { id: "default" } });

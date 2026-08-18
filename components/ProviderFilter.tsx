@@ -67,7 +67,9 @@ export const ProviderFilter: React.FC<ProviderFilterProps> = ({
                     (e.target as HTMLElement).style.display = "none";
                   }}
                 />
-              ) : null}
+              ) : (
+                <span className="text-xs">👑</span>
+              )}
               <span>{provider.name}</span>
               {provider.game_count ? (
                 <span className="text-[10px] px-1 py-0.2 rounded bg-black/40 text-gray-400">

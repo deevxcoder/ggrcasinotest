@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { fetchProviders } from "@/lib/nexx";
 import { db } from "@/lib/db";
+import { ROYAL_GAMES_PROVIDER } from "@/lib/royalGames";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const providers = await fetchProviders();
+    const rawProviders = await fetchProviders();
+    // Prepend Royal Games as a featured in-house provider
+    const allProviders = [ROYAL_GAMES_PROVIDER, ...rawProviders.filter(p => p.brand_id !== ROYAL_GAMES_PROVIDER.brand_id)];
 
     const settings = await db.siteSetting.findUnique({
       where: { id: "default" },
@@ -25,12 +28,13 @@ export async function GET() {
     }
 
     const filteredProviders = enabledProviders
-      ? providers.filter((p) => enabledProviders!.includes(p.brand_id))
-      : providers;
+      ? allProviders.filter((p) => enabledProviders!.includes(p.brand_id))
+      : allProviders;
 
     return NextResponse.json({ providers: filteredProviders });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
 

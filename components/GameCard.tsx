@@ -15,6 +15,11 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPlay }) => {
   // Determine fallback badge color based on provider
   const getGradient = () => {
     const p = (game.provider || "").toLowerCase();
+    const uid = (game.game_uid || "").toLowerCase();
+    if (uid.includes("coinflip")) return "from-amber-600/70 via-yellow-700/50 to-slate-900";
+    if (uid.includes("andarbahar")) return "from-emerald-700/70 via-green-900/50 to-slate-900";
+    if (uid.includes("chickencross")) return "from-yellow-600/70 via-amber-800/50 to-slate-900";
+    if (p.includes("royal")) return "from-amber-800/60 to-purple-950/60";
     if (p.includes("spribe")) return "from-red-900/60 to-amber-900/40";
     if (p.includes("pragmatic")) return "from-amber-900/60 to-yellow-900/40";
     if (p.includes("smartsoft")) return "from-purple-900/60 to-indigo-900/40";
@@ -22,6 +27,14 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPlay }) => {
   };
 
   const isAviator = game.name.toLowerCase().includes("aviator");
+  const isRoyal = (game.provider || "").toLowerCase().includes("royal") || (game.game_uid || "").startsWith("royal_");
+
+  const getRoyalIcon = () => {
+    if (game.game_uid === "royal_coinflip") return "🪙";
+    if (game.game_uid === "royal_andarbahar") return "🎴";
+    if (game.game_uid === "royal_chickencross") return "🐔";
+    return "👑";
+  };
 
   return (
     <div
@@ -30,7 +43,19 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPlay }) => {
     >
       {/* Game Thumbnail */}
       <div className={`relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br ${getGradient()} flex items-center justify-center p-2`}>
-        {game.logo && !imgError ? (
+        {isRoyal ? (
+          <div className="flex flex-col items-center justify-center text-center p-2 space-y-1">
+            <span className="text-4xl sm:text-5xl filter drop-shadow-lg transform group-hover:scale-115 transition-transform duration-300">
+              {getRoyalIcon()}
+            </span>
+            <span className="font-black text-xs text-white uppercase tracking-wider line-clamp-1 drop-shadow">
+              {game.name}
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/30 border border-amber-400/50 text-amber-300 font-black">
+              ORIGINAL
+            </span>
+          </div>
+        ) : game.logo && !imgError ? (
           <img
             src={game.logo}
             alt={game.name}
@@ -55,6 +80,10 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onPlay }) => {
             <span className="px-2 py-0.5 rounded-md bg-red-600/90 text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md">
               <Flame className="w-3 h-3 fill-white" />
               HOT
+            </span>
+          ) : isRoyal ? (
+            <span className="px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-yellow-400 text-black text-[10px] font-black uppercase tracking-wider shadow-md">
+              👑 ROYAL
             </span>
           ) : (
             <span className="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-gray-300 text-[10px] font-bold uppercase tracking-wider border border-white/10">

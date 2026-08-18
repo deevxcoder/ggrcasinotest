@@ -140,11 +140,11 @@ export default function LobbyPage() {
 
       const data = await res.json();
 
-      if (!res.ok || !data.url) {
+      if (!res.ok || (!data.url && !data.isRoyal)) {
         throw new Error(data.error || "Could not launch game session");
       }
 
-      setLaunchUrl(data.url);
+      setLaunchUrl(data.url || null);
     } catch (err: any) {
       setLaunchError(err.message || "Failed to launch game");
     } finally {

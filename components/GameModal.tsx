@@ -3,6 +3,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Maximize2, Minimize2, RefreshCw, Wallet, Plus, AlertCircle, Sparkles } from "lucide-react";
 import { Game } from "@/lib/types";
+import { isRoyalGame } from "@/lib/royalGames";
+import { CoinFlipGame } from "@/components/royal/CoinFlipGame";
+import { AndarBaharGame } from "@/components/royal/AndarBaharGame";
+import { ChickenCrossGame } from "@/components/royal/ChickenCrossGame";
 
 interface GameModalProps {
   game: Game | null;
@@ -30,12 +34,12 @@ export const GameModal: React.FC<GameModalProps> = ({
 
   // Poll player balance every 5 seconds while game is active to show live callback settlements
   useEffect(() => {
-    if (!launchUrl) return;
+    if (!launchUrl && !isRoyalGame(game?.game_uid || "")) return;
     const interval = setInterval(() => {
       onRefreshBalance();
     }, 5000);
     return () => clearInterval(interval);
-  }, [launchUrl, onRefreshBalance]);
+  }, [launchUrl, game, onRefreshBalance]);
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
@@ -47,6 +51,8 @@ export const GameModal: React.FC<GameModalProps> = ({
   };
 
   if (!game) return null;
+
+  const isNativeRoyal = isRoyalGame(game.game_uid);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-2 sm:p-4">
@@ -63,7 +69,9 @@ export const GameModal: React.FC<GameModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-black text-white leading-tight">{game.name}</h3>
-              <p className="text-[11px] text-gray-400 font-medium leading-tight">{game.provider}</p>
+              <p className="text-[11px] text-amber-400 font-bold leading-tight">
+                {isNativeRoyal ? "👑 In-House Royal Games" : game.provider}
+              </p>
             </div>
           </div>
 
@@ -97,7 +105,7 @@ export const GameModal: React.FC<GameModalProps> = ({
 
           {/* Right Action Controls */}
           <div className="flex items-center gap-2">
-            {launchUrl && (
+            {launchUrl && !isNativeRoyal && (
               <a
                 href={launchUrl}
                 target="_blank"
@@ -130,54 +138,69 @@ export const GameModal: React.FC<GameModalProps> = ({
 
         {/* Game Screen Container */}
         <div className="relative flex-1 w-full h-full bg-black overflow-hidden flex items-center justify-center">
-          {loading && (
-            <div className="flex flex-col items-center justify-center gap-4 text-center p-6">
-              <div className="w-14 h-14 rounded-full border-4 border-amber-500/20 border-t-amber-400 animate-spin" />
-              <div>
-                <h4 className="text-lg font-black text-white">Launching {game.name}...</h4>
-                <p className="text-xs text-gray-400 mt-1">
-                  Encrypting session payload & establishing connection with NexxAPI
-                </p>
-              </div>
-            </div>
-          )}
+          {/* Native In-House Royal Games */}
+          {isNativeRoyal ? (
+            game.game_uid === "royal_coinflip" ? (
+              <CoinFlipGame userBalance={userBalance} onBalanceChange={onRefreshBalance} />
+            ) : game.game_uid === "royal_andarbahar" ? (
+              <AndarBaharGame userBalance={userBalance} onBalanceChange={onRefreshBalance} />
+            ) : (
+              <ChickenCrossGame userBalance={userBalance} onBalanceChange={onRefreshBalance} />
+            )
+          ) : (
+            /* External NexxAPI Games */
+            <>
+              {loading && (
+                <div className="flex flex-col items-center justify-center gap-4 text-center p-6">
+                  <div className="w-14 h-14 rounded-full border-4 border-amber-500/20 border-t-amber-400 animate-spin" />
+                  <div>
+                    <h4 className="text-lg font-black text-white">Launching {game.name}...</h4>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Encrypting session payload & establishing connection with NexxAPI
+                    </p>
+                  </div>
+                </div>
+              )}
 
-          {error && !loading && (
-            <div className="flex flex-col items-center justify-center gap-4 text-center max-w-md p-6 bg-[#161c2b] border border-rose-500/40 rounded-2xl">
-              <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
-                <AlertCircle className="w-6 h-6" />
-              </div>
-              <div>
-                <h4 className="text-base font-black text-white">Launch Failed</h4>
-                <p className="text-xs text-rose-300 mt-1">{error}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={onOpenDeposit}
-                  className="px-4 py-2 rounded-xl bg-emerald-500 text-black font-bold text-xs"
-                >
-                  Deposit Funds
-                </button>
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 rounded-xl bg-casino-card border border-casino-border text-gray-300 text-xs font-bold"
-                >
-                  Back to Lobby
-                </button>
-              </div>
-            </div>
-          )}
+              {error && !loading && (
+                <div className="flex flex-col items-center justify-center gap-4 text-center max-w-md p-6 bg-[#161c2b] border border-rose-500/40 rounded-2xl">
+                  <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                    <AlertCircle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black text-white">Launch Failed</h4>
+                    <p className="text-xs text-rose-300 mt-1">{error}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={onOpenDeposit}
+                      className="px-4 py-2 rounded-xl bg-emerald-500 text-black font-bold text-xs"
+                    >
+                      Deposit Funds
+                    </button>
+                    <button
+                      onClick={onClose}
+                      className="px-4 py-2 rounded-xl bg-casino-card border border-casino-border text-gray-300 text-xs font-bold"
+                    >
+                      Back to Lobby
+                    </button>
+                  </div>
+                </div>
+              )}
 
-          {launchUrl && !loading && !error && (
-            <iframe
-              src={launchUrl}
-              className="w-full h-full border-0"
-              allow="autoplay; fullscreen; encrypted-media; payment"
-              title={game.name}
-            />
+              {launchUrl && !loading && !error && (
+                <iframe
+                  src={launchUrl}
+                  className="w-full h-full border-0"
+                  allow="autoplay; fullscreen; encrypted-media; payment"
+                  title={game.name}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
     </div>
   );
 };
+

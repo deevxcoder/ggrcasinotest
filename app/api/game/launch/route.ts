@@ -33,7 +33,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // Call NexxAPI to launch game
+    // If it's a native Royal Game, launch directly in native modal without external NexxAPI call
+    if (String(gameUid).startsWith("royal_")) {
+      return NextResponse.json({
+        success: true,
+        isRoyal: true,
+        url: null,
+        user: {
+          id: user.id,
+          username: user.username,
+          balance: user.balance,
+        },
+      });
+    }
+
+    // Call NexxAPI to launch external game
     const result = await launchGameSession({
       userId: user.id,
       gameUid: String(gameUid),

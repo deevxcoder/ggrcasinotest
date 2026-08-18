@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchGames, fetchProviders } from "@/lib/nexx";
 import { db } from "@/lib/db";
+import { ROYAL_GAMES, ROYAL_GAMES_BRAND_ID } from "@/lib/royalGames";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,22 @@ export async function GET(req: Request) {
       }
     }
 
+    // Check if Royal Games is requested
+    if (brandId === ROYAL_GAMES_BRAND_ID) {
+      if (enabledProviders && !enabledProviders.includes(ROYAL_GAMES_BRAND_ID)) {
+        return NextResponse.json({ games: [], total: 0, brand_id: brandId });
+      }
+
+      let royalList = ROYAL_GAMES;
+      if (query.trim()) {
+        royalList = royalList.filter(g => g.name.toLowerCase().includes(query.toLowerCase()));
+      }
+      if (category && category !== "all") {
+        royalList = royalList.filter(g => g.category.toLowerCase().includes(category));
+      }
+      return NextResponse.json({ games: royalList, total: royalList.length, brand_id: brandId });
+    }
+
     if (brandId) {
       // If brandId is specified but not in enabled list, return empty
       if (enabledProviders && !enabledProviders.includes(brandId)) {
@@ -53,7 +70,7 @@ export async function GET(req: Request) {
     // Default featured brands if none configured
     const defaultBrands = [57, 45, 49, 107, 152, 136, 99];
     const targetBrands = enabledProviders && enabledProviders.length > 0
-      ? enabledProviders
+      ? enabledProviders.filter(b => b !== ROYAL_GAMES_BRAND_ID)
       : defaultBrands;
 
     // Fetch games for enabled brands (batch first 8 to keep response snappy)
@@ -63,18 +80,28 @@ export async function GET(req: Request) {
 
     let allGames = results.flatMap((r) => r.games);
 
+    // Prepend Royal Games if Royal Games is enabled
+    const royalEnabled = !enabledProviders || enabledProviders.includes(ROYAL_GAMES_BRAND_ID);
+    if (royalEnabled) {
+      let filteredRoyal = ROYAL_GAMES;
+      if (query.trim()) {
+        filteredRoyal = filteredRoyal.filter(g => g.name.toLowerCase().includes(query.toLowerCase()));
+      }
+      allGames = [...filteredRoyal, ...allGames];
+    }
+
     if (category && category !== "all") {
       allGames = allGames.filter((g) => {
         const cat = g.category?.toLowerCase() || "";
         const name = g.name.toLowerCase();
         if (category === "crash") {
-          return cat.includes("flash") || name.includes("aviator") || name.includes("crash") || name.includes("balloon") || name.includes("jet");
+          return cat.includes("flash") || name.includes("aviator") || name.includes("crash") || name.includes("balloon") || name.includes("jet") || name.includes("chicken");
         }
         if (category === "slots") {
-          return cat.includes("slot") || (!cat.includes("live") && !cat.includes("flash"));
+          return cat.includes("slot") || (!cat.includes("live") && !cat.includes("flash") && !cat.includes("table") && !cat.includes("casual"));
         }
-        if (category === "live") {
-          return cat.includes("live") || name.includes("roulette") || name.includes("blackjack") || name.includes("baccarat");
+        if (category === "live" || category === "table") {
+          return cat.includes("live") || cat.includes("table") || name.includes("roulette") || name.includes("blackjack") || name.includes("baccarat") || name.includes("andar");
         }
         return cat.includes(category);
       });
@@ -89,4 +116,5 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
 
