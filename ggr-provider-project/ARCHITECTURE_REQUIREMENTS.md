@@ -141,6 +141,22 @@ When a player finishes a round on the provider engine, the provider immediately 
 
 ---
 
+## 🌐 Top Master Game Aggregators & Upstream Suppliers
+
+To source multiple providers into your B2B platform, here are the top industry aggregators to connect with or benchmark against:
+
+| Aggregator | Website | Focus Markets & Strengths | Top Providers Included |
+| :--- | :--- | :--- | :--- |
+| **NexxAPI** | `api.nexxapi.tech` | Fast Asian/Indian market integration, lightweight REST API, instant prepaid GGR | Spribe (Aviator), PGSoft, JILI, Smartsoft, Endorphina, RubyPlay, Hacksaw |
+| **Slotegrator (APIgrator)** | `slotegrator.pro` | Global enterprise leader with 15,000+ games & 100+ studios in a single contract | Evolution, Pragmatic Play, NetEnt, Microgaming, Amatic, Betsoft, Habanero |
+| **SoftGamings** | `softgamings.com` | High-performance unified aggregator with 10,000+ games, live dealers & slots | Evolution Gaming, Play'n GO, Quickspin, Yggdrasil, NetEnt, Pragmatic |
+| **SoftSwiss** | `softswiss.com` | Global crypto & fiat gaming engine processing €10B+ monthly turnover | 200+ game studios, BGaming, Pragmatic, Evolution, Spinomenal |
+| **BetConstruct** | `betconstruct.com` | All-in-one gaming suite with live casino, slots, sportsbook & virtual games | CreedRoomz, Pragmatic, Fashion TV, Evolution, Ezugi |
+| **EvenBet Gaming** | `evenbetgaming.com` | Asian & Indian card game specialist (Teen Patti, Andar Bahar, Poker) | In-house card tables & aggregated studio network |
+| **EveryMatrix (CasinoEngine)** | `everymatrix.com` | Tier-1 regulated enterprise engine with 13,000+ certified casino games | All major certified global studios |
+
+---
+
 ## 🔄 Client Integration Phase (Connecting to our Casino)
 
 Once the standalone provider is deployed:
@@ -150,3 +166,4 @@ Once the standalone provider is deployed:
    NEXX_TOKEN=your_generated_operator_token
    ```
 2. Our client platform immediately streams all provider games with instant balance crediting and zero external vendor dependencies!
+
