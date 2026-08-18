@@ -276,10 +276,13 @@ export default function LobbyPage() {
       {/* Footer */}
       <footer className="mt-16 border-t border-casino-border/60 bg-[#06080e] py-8 text-center text-xs text-gray-500 space-y-2">
         <p className="font-semibold text-gray-400">
-          NEXX GGR Casino Platform · Built with Next.js 14, TypeScript & SQLite
+          {settings?.siteName || "GGR Casino"} Platform · Built with Next.js 14, TypeScript & Supabase PostgreSQL
         </p>
         <p className="text-[11px]">
           Powered by NexxAPI Gaming Infrastructure · AES-256-ECB Secured Launch & Idempotent Callback Settlements
+        </p>
+        <p className="text-[10px] text-gray-600">
+          © {new Date().getFullYear()} {settings?.siteName || "GGR Casino"}. All rights reserved.
         </p>
       </footer>
 
